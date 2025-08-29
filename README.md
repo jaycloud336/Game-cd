@@ -1,0 +1,1 @@
+# Malgus Game ArgoCD Configuration
