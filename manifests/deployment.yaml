@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: malgus-game
-        image: jaycloud336/malgus-game:v1.0.0
+        image: jaycloud336/malgus-game-app:v1.0.0
         ports:
         - containerPort: 3000
