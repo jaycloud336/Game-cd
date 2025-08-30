@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: malgus-game
+spec:
+  selector:
+    matchLabels:
+      app: malgus-game
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: malgus-game
+    spec:
+      containers:
+      - name: malgus-game
+        image: jaycloud336/malgus-game:v1.0.0
+        ports:
+        - containerPort: 3000
