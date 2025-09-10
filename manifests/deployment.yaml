@@ -1,23 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: malgus-game
+  name: react-game-deployment
+  namespace: react-game-cd # Add this line
 spec:
   selector:
     matchLabels:
-      app: malgus-game
+      app: react-game
   replicas: 2
   template:
     metadata:
       labels:
-        app: malgus-game
+        app: react-game
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3000"
-        prometheus.io/path: "/metrics"  
+        prometheus.io/path: "/metrics"
     spec:
       containers:
-      - name: malgus-game
+      - name: react-game-container
         image: jaycloud336/malgus-game-app:v1.0.0
         ports:
         - containerPort: 3000

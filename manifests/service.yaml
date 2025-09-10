@@ -1,10 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: malgus-game-service
+  name: react-game-service
+  namespace: react-game-cd # Add this line
 spec:
   selector:
-    app: malgus-game
+    app: react-game
   ports:
   - port: 80
     protocol: TCP
