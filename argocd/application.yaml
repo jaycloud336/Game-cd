@@ -4,7 +4,7 @@ metadata:
   name: react-game-app
   namespace: argocd
 spec:
-  project: default
+  project: react-game-cd
   source:
     repoURL: https://github.com/jaycloud336/Game-cd
     targetRevision: HEAD
