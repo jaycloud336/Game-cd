@@ -4,14 +4,14 @@ metadata:
   name: react-game-app
   namespace: argocd
 spec:
-  project: react-game-cd
+  project: default
   source:
     repoURL: https://github.com/jaycloud336/Game-cd
     targetRevision: HEAD
     path: manifests
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: react-game-cd
   syncPolicy:
     automated:
       prune: true
