@@ -31,14 +31,24 @@ kubectl get pods -n kube-system
 ```
 
 ### 2. ArgoCD Installation
-Install ArgoCD onto your cluster using the official Kubernetes manifests. This approach uses raw YAML files and doesn't require Helm.
+Install ArgoCD onto your cluster using the Helm Chart. This approach creates a customizable template.
 
 ```bash
+# Add ArgoCD Helm repository
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
 # Create ArgoCD namespace
 kubectl create namespace argocd
 
-# Install ArgoCD using official manifests
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# Generate ArgoCD manifests using latest Helm chart (based on reccomended directory structure)
+helm template argo argo/argo-cd --version 8.3.5 --namespace argocd > argo-helm.yaml
+
+# Customize the file path as needed to match your direcoty structure
+helm template argo argo/argo-cd --version 8.3.5 --namespace argocd > helm/argocd-helm/argo-helm.yaml
+
+# Apply the generated manifests
+kubectl apply -f argo-helm.yaml
 
 # Wait for pods to be ready
 kubectl get pods -n argocd --watch
@@ -49,15 +59,16 @@ To access the ArgoCD dashboard, you'll need to port forward the service and retr
 
 ```bash
 # Port forward to access ArgoCD UI
-kubectl port-forward -n argocd svc/argocd-server 8080:443
+kubectl port-forward -n argocd svc/argo-argocd-server 8080:443
 
 # Get initial admin password
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-```
 
-Access ArgoCD at: https://localhost:8080
+
+# Access ArgoCD at: https://localhost:8080
 - Username: admin
-- Password: (decoded from the secret above)
+- Password: (decoded from the secret above) # example: luhxWGTaHcolh49
+```
 
 ## GitOps Workflow
 
@@ -70,8 +81,26 @@ Game-cd/
 │   ├── namespace.yaml     # Defines the application's namespace
 │   ├── deployment.yaml    # How to run your app
 │   └── service.yaml       # How to expose your app internally
-└── argocd/              # ArgoCD application manifest
-    └── application.yaml   # Tells ArgoCD where to find the manifests
+├── argocd/               # ArgoCD application manifest
+│   └── application.yaml   # Tells ArgoCD where to find the manifests
+└── helm/                 # Helm-generated manifests (NEW)
+    └── argocd-helm/      # ArgoCD installation manifests
+        └── argo-helm.yaml # Generated Helm template output
+```
+### Recommended Directory Structure
+
+```bash
+# Create local repository structure
+mkdir Game-cd
+cd Game-cd
+mkdir manifests argocd helm
+mkdir helm/argocd-helm
+
+# Create manifest files (add content as shown in sections 2-3)
+touch manifests/namespace.yaml
+touch manifests/deployment.yaml  
+touch manifests/service.yaml
+touch argocd/application.yaml
 ```
 
 ### 2. The Kubernetes Manifests
@@ -126,7 +155,7 @@ spec:
 ```
 
 ### 3. ArgoCD Application Manifest
-This file is the GitOps manifest that points ArgoCD to your Kubernetes manifests. It is located in the argo-app/ directory.
+This file is the GitOps manifest that points ArgoCD to your Kubernetes manifests. It is located in the argocd/ directory.
 
 **application.yaml**
 ```yaml
@@ -151,13 +180,30 @@ spec:
     syncOptions:
     - CreateNamespace=true
 ```
+### Github Repo Creation / Intialization
+
+***Required: Create a new repository on GitHub named Game-cd, then proceed with the following commands:***
+
+```bash
+# Clone your GitHub repository
+git clone https://github.com/jaycloud336/react-game-cd.git
+cd react-game-cd
+
+# Push your manifest files into the cloned repository 
+
+# Commit and push the manifest files
+git add .
+git commit -m "Add ArgoCD application and Kubernetes manifests"
+git push origin main
+```
 
 ### 4. Deployment
 Once your files are pushed to the Git repository, you can deploy the ArgoCD application.
 
+
 ```bash
 # Apply the ArgoCD application from your repository
-kubectl apply -f argo-app/application.yaml
+kubectl apply -f argocd/application.yaml
 
 # Verify application is created
 kubectl get applications -n argocd
