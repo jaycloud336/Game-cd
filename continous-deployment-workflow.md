@@ -180,6 +180,22 @@ spec:
     syncOptions:
     - CreateNamespace=true
 ```
+## *Note: Three Different "Namespaces"*
+
+1. **ArgoCD's Own Namespace**
+   - Name: `argocd` | Contains: ArgoCD pods/services | How: Manual `kubectl create namespace argocd` for Helm install
+   - *View in: `kubectl get pods -n argocd` or ArgoCD UI server components*
+
+2. **Application Definition Namespace**  
+   - Name: `argocd` (same) | Contains: Application YAML objects | How: Auto when `kubectl apply -f application.yaml`
+   - *View in: `kubectl get applications -n argocd` or ArgoCD UI applications list*
+
+3. **Target Deployment Namespace**
+   - Name: `react-game-cd` | Contains: Your app pods/services | How: Manual `manifests/namespace.yaml` deployed by ArgoCD
+   - *View in: `kubectl get pods -n react-game-cd` or ArgoCD UI application resources tree*
+
+**Key:** ArgoCD lives in `argocd`, manages apps in other namespaces
+
 ### Github Repo Creation / Intialization
 
 ***Required: Create a new repository on GitHub named Game-cd, then proceed with the following commands:***
@@ -232,4 +248,41 @@ kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 
 # Access the application at:
 # http://localhost:3000
+
 ```
+
+### 7. Docker Desktop Single-Node Cluster Teardown & Restore
+
+```bash
+# Reset Kubernetes cluster in Docker Desktop
+# Settings → Kubernetes → Reset Kubernetes Cluster
+Restore (2 Commands)
+bash# 1. Reinstall ArgoCD
+kubectl create namespace argocd
+kubectl apply -f helm/argocd-helm/argo-helm.yaml
+
+# 2. Reapply your application
+kubectl apply -f argocd/application.yaml
+Post-Restore Access
+bash# Get new ArgoCD admin password (changes on each install)
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# Access ArgoCD UI
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+
+# Access your application (after ArgoCD syncs)
+kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
+```
+#### Important Note: When Restarting Configuration Image & Port Compatibility
+
+*This project references two different images:*
+
+*• `jaycloud336/malgus-game-app:v1.0.0` - Runs on port 3000*
+*• `jaycloud336/malgus-game-app:cicd` - Runs on port 80 (nginx)*
+
+*Ensure your manifest files match the image you want to deploy:*
+
+*• For `:v1.0.0` → `containerPort: 3000` and `targetPort: 3000`*
+*• For `:cicd` → `containerPort: 80` and `targetPort: 80`*
+
+*Note: ArgoCD will automatically detect your Git repository and redeploy your application within 1-3 minutes. Everything returns to the exact state defined in Git.*
