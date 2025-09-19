@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: react-game-deployment
-  namespace: react-game-cd # Add this line
+  namespace: react-game-cd
 spec:
   selector:
     matchLabels:
@@ -12,13 +12,21 @@ spec:
     metadata:
       labels:
         app: react-game
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "3000"
-        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: react-game-container
-        image: jaycloud336/malgus-game-app:v1.0.0
+        image: jaycloud336/malgus-game-app:cicd
         ports:
-        - containerPort: 3000
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
