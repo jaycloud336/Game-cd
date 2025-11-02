@@ -1,70 +1,12 @@
 # React-Based Game - CD GitOps POC
 
 ## Overview
-This proof of concept (POC) demonstrates key GitOps principles by showcasing an automated continuous deployment (CD) workflow. The project utilizes a modified version of an existing containerized React application and demonstrates how to configure and deploy it using ArgoCD. It synchronizes the desired state of a Kubernetes cluster with a Git repository, ensuring that every change to the source of truth triggers a reliable and automated deployment.
+Proof of concept (POC) demonstrates key GitOps principles by showcasing an automated continuous deployment (CD) workflow. The project utilizes a modified version of an existing containerized React application and demonstrates how to configure and deploy it using ArgoCD. It synchronizes the desired state of a Kubernetes cluster with a Git repository, ensuring that every change to the source of truth triggers a reliable and automated deployment.
 
 ## Technical Scope & Business Value
 -   **Declarative Infrastructure**: The project uses Kubernetes manifests to define its deployment and service type.
 -   **Automated Deployment**: It implements an automated Git-Ops triggered continuous deployment (CD) workflow.
 -   **Scalable Architecture**: The architectural pattern demonstrated here is a foundational template for building more complex and comprehensive CI/CD pipelines in professional environments.
-
----
-
-## Git-Ops Workflow
-Developer (Manual) ➡️ Git Repository (Manifests) ➡️ ArgoCD Controller
-|
-v
-Kubernetes Cluster
-(Docker Desktop)
-
----
-
-## Repository Structure
-```
-Game-cd/
-├── manifests/              # Kubernetes application manifests
-│   ├── namespace.yaml     # Application namespace
-│   ├── deployment.yaml    # Pod and container specifications
-│   └── service.yaml       # Network exposure configuration
-├── argocd/               # ArgoCD application manifests
-│   └── application.yaml   # ArgoCD Application resource
-├── helm/                 # Helm-generated manifests
-│   └── argocd-helm/      # ArgoCD installation manifests
-│       └── argo-helm.yaml # Generated Helm template output
-└── README.md              # Project documentation
-```
-
----
-
-## Architecture Diagram
-```
-┌─────────────┐     ┌─────────────────┐     ┌─────────────────────┐
-│ Developer   │───▶│  Git Repository │───▶ │  ArgoCD Controller  │
-│  (Manual)   │     │    (Manifests)  │     │(Reconciliation Loop)│
-└─────────────┘     └─────────────────┘     └─────────────────────┘
-                                                      │
-                                                      ▼
-           ┌────────────────────────────────────────────────────────┐
-           │            Docker Desktop - Kubernetes Node            │
-           │ (Single-node Cluster running on a local machine)       │
-           │ ┌──────────────────┐   ┌───────────────────────────┐   │
-           │ │   ArgoCD Pods    │   │      Application Pods     │   │
-           │ │ (argocd-server)  │   │     (react-game-cd)       │   │
-           │ └──────────────────┘   └───────────────────────────┘   │
-           │           ▲                       │                    │
-           │           │                 ┌───────────────┐          │
-           │ ┌─────────┴─────────┐       │ ClusterIP     │          │
-           │ │   ArgoCD UI       │◀────▶│ Service       │          │
-           │ │  (localhost:8080) │       │ (10.96.X.X)   │          │
-           │ └─────────┬─────────┘       └───────────────┘          │
-           │           │ Port Forwarding      ▲ (Port Forwarding)   │
-           └───────────┴───────────────────────┘────────────────────┘
-                       │
-             ┌──────────────────┐
-             │   User Access    │
-             │  (Browser/CLI)   │
-             └──────────────────┘
-```
 
 ---
 
@@ -74,6 +16,15 @@ Game-cd/
 -   **Orchestration**: Kubernetes (Docker Desktop)
 -   **GitOps**: ArgoCD (installed via Helm template method for reliability)
 -   **Registry**: Docker Hub (image repository)
+
+---
+
+## Git-Ops Workflow
+Developer (Manual) ➡️ Git Repository (Manifests) ➡️ ArgoCD Controller
+|
+v
+Kubernetes Cluster
+(Docker Desktop)
 
 ---
 
@@ -178,14 +129,14 @@ kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 
 ## Workflow Process
 
-1.  **Manual CI (Image Selection):** The developer uses an existing, pre-built Docker image from a container registry. This step is intentionally manual to isolate and highlight the subsequent GitOps process.
+1.  **Manual CI (Image Selection):** Utilize existing, pre-built Docker image from a container registry. This step is intentionally manual to isolate and highlight the subsequent GitOps process.
 2.  **Triggering CD with Git:** A declarative change, such as updating the image tag in the `deployment.yaml` manifest, is committed and pushed to the Git repository.
 3.  **Automated Deployment (ArgoCD):** ArgoCD continuously monitors the Git repository. Upon detecting the manifest change, ArgoCD automatically pulls and applies the new configuration to the Kubernetes cluster. The new Pods are deployed, ensuring the cluster's live state matches the desired state in Git.
 4.  **Application Access:** The newly deployed application is made accessible via `kubectl port-forward` for final validation.
 
 ---
 
-## GitOps Principles Demonstrated
+## GitOps Principles
 -   **Declarative Configuration**: The state of the system is defined in a declarative format stored in Git.
 -   **Version Control**: Every change to the deployment configuration is tracked and auditable via Git.
 -   **Automated Synchronization**: ArgoCD acts as a reconciliation agent, ensuring the cluster's live state matches the desired state in Git.
@@ -206,7 +157,7 @@ kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 -   **Local Environment**: Intended for a local Kubernetes cluster (Docker Desktop) for ease of setup.
 -   **Basic Configuration**: Minimal ArgoCD setup to focus on core principles rather than advanced features.
 
-## Project Challenges
+## Challenges:
 This project's focus on a minimal, CD-only workflow on a local environment introduced a specific set of challenges:
 
 * **Port Forwarding via WSL2:** Due to Docker Desktop's reliance on WSL2 for its Kubernetes cluster on Windows, port forwarding was the most practical method for accessing the application. While effective for a POC, this approach is not scalable for production environments, where bare metal or Cloud Service Provider (CSP) clusters would utilize more robust networking solutions like **LoadBalancers** or **Ingress controllers**.

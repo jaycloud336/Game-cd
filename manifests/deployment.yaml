@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: react-game-container
-        image: jaycloud336/malgus-game-app:cicd
+        image: jaycloud336/malgus-game-app:v1.0.0
         ports:
         - containerPort: 80
         livenessProbe:

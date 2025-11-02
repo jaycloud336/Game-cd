@@ -5,7 +5,7 @@ This project demonstrates a complete GitOps workflow using **ArgoCD** to deploy 
 
 ## Architecture Components
 - **Application**: React-based Game
-- **Container Registry**: Docker Hub (`jaycloud336/malgus-game-app:v1.0.0`)
+- **Container Registry**: Docker Hub (`jaycloud336/malgus-game-app:cicd`)
 - **Kubernetes**: Docker Desktop K8s cluster
 - **GitOps Tool**: ArgoCD
 - **Git Repository**: Github
@@ -44,7 +44,7 @@ kubectl create namespace argocd
 # Generate ArgoCD manifests using latest Helm chart (based on reccomended directory structure)
 helm template argo argo/argo-cd --version 8.3.5 --namespace argocd > argo-helm.yaml
 
-# Customize the file path as needed to match your direcoty structure
+# Customize the file path as needed to match your directory structure
 helm template argo argo/argo-cd --version 8.3.5 --namespace argocd > helm/argocd-helm/argo-helm.yaml
 
 # Apply the generated manifests
@@ -62,7 +62,8 @@ To access the ArgoCD dashboard, you'll need to port forward the service and retr
 kubectl port-forward -n argocd svc/argo-argocd-server 8080:443
 
 # Get initial admin password
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+kubectl -n argocd get secret argocd-initial-admin-secret -o yaml
+echo <encrypted password> | base64 -d
 
 
 # Access ArgoCD at: https://localhost:8080
@@ -73,17 +74,17 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 ## GitOps Workflow
 
 ### 1. Project Files & Manifests
-The core of this project is the Git repository structure, which separates the application's source code from its Kubernetes manifests.
+Project Git repository structure including Kubernetes manifests.
 
 ```
 Game-cd/
 ├── manifests/             # Kubernetes application manifests
 │   ├── namespace.yaml     # Defines the application's namespace
-│   ├── deployment.yaml    # How to run your app
-│   └── service.yaml       # How to expose your app internally
+│   ├── deployment.yaml    # App deployment 
+│   └── service.yaml       # App service exposure
 ├── argocd/               # ArgoCD application manifest
 │   └── application.yaml   # Tells ArgoCD where to find the manifests
-└── helm/                 # Helm-generated manifests (NEW)
+└── helm/                 # Helm-generated manifests
     └── argocd-helm/      # ArgoCD installation manifests
         └── argo-helm.yaml # Generated Helm template output
 ```
@@ -133,9 +134,21 @@ spec:
     spec:
       containers:
       - name: react-game-container
-        image: jaycloud336/malgus-game-app:v1.0.0
+        image: jaycloud336/malgus-game-app:cicd
         ports:
-        - containerPort: 3000
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
 ```
 
 **service.yaml**
@@ -144,14 +157,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: react-game-service
-  namespace: react-game-cd
+  namespace: react-game-cd # Add this line
 spec:
   selector:
     app: react-game
   ports:
   - port: 80
     protocol: TCP
-    targetPort: 3000
+    targetPort: 80
 ```
 
 ### 3. ArgoCD Application Manifest
@@ -201,21 +214,18 @@ spec:
 ***Required: Create a new repository on GitHub named Game-cd, then proceed with the following commands:***
 
 ```bash
-# Clone your GitHub repository
+# Clone your GitHub repository (or create from scratch in githiub as necesary)
 git clone https://github.com/jaycloud336/react-game-cd.git
 cd react-game-cd
 
-# Push your manifest files into the cloned repository 
-
-# Commit and push the manifest files
+# Commit and push the manifest files into the repository
 git add .
 git commit -m "Add ArgoCD application and Kubernetes manifests"
 git push origin main
 ```
 
 ### 4. Deployment
-Once your files are pushed to the Git repository, you can deploy the ArgoCD application.
-
+Once your files are pushed to the Git repository, you can apply the ArgoCD application manifest.
 
 ```bash
 # Apply the ArgoCD application from your repository
@@ -226,7 +236,7 @@ kubectl get applications -n argocd
 ```
 
 ### 5. Monitor Deployment
-ArgoCD will automatically detect and deploy your manifests. You can monitor the process via the CLI or the UI.
+ArgoCD will automatically detect and deploy the manifests. 
 
 ```bash
 # Watch ArgoCD sync the application
@@ -247,7 +257,7 @@ Since we are using a ClusterIP service, we will use port forwarding to access th
 kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 
 # Access the application at:
-# http://localhost:3000
+ http://localhost:3000
 
 ```
 
@@ -255,27 +265,36 @@ kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 
 ```bash
 # Reset Kubernetes cluster in Docker Desktop
-# Settings → Kubernetes → Reset Kubernetes Cluster
-Restore (2 Commands)
+# Option 1: Clean removal (preserves local files)
+kubectl delete -f argocd/application.yaml
+kubectl delete namespace react-game-cd
+kubectl delete namespace argocd
+
+# Option 2: Nuclear option - Reset entire cluster
+Docker Desktop → Settings → Kubernetes → Reset Kubernetes Cluster
+# ⚠️ This removes ALL cluster resources but keeps local files
+
+# 1. Reinstall argocd application
 bash# 1. Reinstall ArgoCD
 kubectl create namespace argocd
 kubectl apply -f helm/argocd-helm/argo-helm.yaml
 
-# 2. Reapply your application
+# 2. Re-apply application.yaml
 kubectl apply -f argocd/application.yaml
-Post-Restore Access
+# Restore Access
 bash# Get new ArgoCD admin password (changes on each install)
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+kubectl -n argocd get secret argocd-initial-admin-secret -o yaml
+echo <encrypted password> | base64 -d
 
-# Access ArgoCD UI
+# 3. Access ArgoCD UI
 kubectl port-forward -n argocd svc/argocd-server 8080:443
 
-# Access your application (after ArgoCD syncs)
+# 4. Access your application (after ArgoCD syncs)
 kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 ```
 #### Important Note: When Restarting Configuration Image & Port Compatibility
 
-*This project references two different images:*
+*This project references two different images in order to demonstrated CD principles:*
 
 *• `jaycloud336/malgus-game-app:v1.0.0` - Runs on port 3000*
 *• `jaycloud336/malgus-game-app:cicd` - Runs on port 80 (nginx)*
@@ -285,4 +304,4 @@ kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 *• For `:v1.0.0` → `containerPort: 3000` and `targetPort: 3000`*
 *• For `:cicd` → `containerPort: 80` and `targetPort: 80`*
 
-*Note: ArgoCD will automatically detect your Git repository and redeploy your application within 1-3 minutes. Everything returns to the exact state defined in Git.*
+*Note: ArgoCD will automatically detect pushed Git repository changes and redeploy application within 1-3 minutes. Everything returns to the exact state defined in Git.*
