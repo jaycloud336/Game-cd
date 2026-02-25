@@ -3,6 +3,8 @@
 ## Project Overview
 This project demonstrates a complete GitOps workflow using **ArgoCD** to deploy a Dockerized React-based game to a local Kubernetes cluster. The setup showcases continuous deployment principles, where application changes are managed through a Git repository and automatically synchronized with the Kubernetes cluster. 
 
+![alt text](Gemini_Generated_Image_37zj6k37zj6k37zj.png)
+
 ## Architecture Components
 - **Application**: React-based Game
 - **Container Registry**: Docker Hub (`jaycloud336/malgus-game-app:cicd`)
@@ -60,6 +62,9 @@ To access the ArgoCD dashboard, you'll need to port forward the service and retr
 ```bash
 # Port forward to access ArgoCD UI
 kubectl port-forward -n argocd svc/argo-argocd-server 8080:443
+
+# Port forward to access ArgoCD UI
+kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # Get initial admin password
 kubectl -n argocd get secret argocd-initial-admin-secret -o yaml
@@ -136,17 +141,17 @@ spec:
       - name: react-game-container
         image: jaycloud336/malgus-game-app:cicd
         ports:
-        - containerPort: 80
+        - containerPort: # Port 80 for the production image (cicd) / Port 3000 for development image (v1.0.0)
         livenessProbe:
           httpGet:
             path: /
-            port: 80
+            port: 80 # Port 80 for the production image (cicd) / Port 3000 for development image (v1.0.0)
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /
-            port: 80
+            port: 80 # Port 80 for the production image (cicd) / Port 3000 for development image (v1.0.0)
           initialDelaySeconds: 5
           periodSeconds: 5
 ```
@@ -164,7 +169,7 @@ spec:
   ports:
   - port: 80
     protocol: TCP
-    targetPort: 80
+    targetPort: 80 # Port 80 for the production image (cicd) / Port 3000 for development image (v1.0.0)
 ```
 
 ### 3. ArgoCD Application Manifest
@@ -193,6 +198,21 @@ spec:
     syncOptions:
     - CreateNamespace=true
 ```
+
+#### Important Note: Configuration Image & Port Compatibility
+
+*This project references two different images in order to demonstrated CD principles:*
+
+*• `jaycloud336/malgus-game-app:v1.0.0` - Runs on port 3000*
+*• `jaycloud336/malgus-game-app:cicd` - Runs on port 80 (nginx)*
+
+*Ensure your manifest files match the image you want to deploy:*
+
+*• For `:v1.0.0` → `containerPort: 3000` and `targetPort: 3000`*
+*• For `:cicd` → `containerPort: 80` and `targetPort: 80`*
+
+*Note: ArgoCD will automatically detect pushed Git repository changes and redeploy application within 1-3 minutes. Everything returns to the exact state defined in Git.*
+
 ## *Note: Three Different "Namespaces"*
 
 1. **ArgoCD's Own Namespace**
@@ -275,14 +295,13 @@ Docker Desktop → Settings → Kubernetes → Reset Kubernetes Cluster
 # ⚠️ This removes ALL cluster resources but keeps local files
 
 # 1. Reinstall argocd application
-bash# 1. Reinstall ArgoCD
 kubectl create namespace argocd
 kubectl apply -f helm/argocd-helm/argo-helm.yaml
 
 # 2. Re-apply application.yaml
 kubectl apply -f argocd/application.yaml
 # Restore Access
-bash# Get new ArgoCD admin password (changes on each install)
+Get new ArgoCD admin password (changes on each install)
 kubectl -n argocd get secret argocd-initial-admin-secret -o yaml
 echo <encrypted password> | base64 -d
 
@@ -292,16 +311,3 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 # 4. Access your application (after ArgoCD syncs)
 kubectl port-forward -n react-game-cd svc/react-game-service 3000:80
 ```
-#### Important Note: When Restarting Configuration Image & Port Compatibility
-
-*This project references two different images in order to demonstrated CD principles:*
-
-*• `jaycloud336/malgus-game-app:v1.0.0` - Runs on port 3000*
-*• `jaycloud336/malgus-game-app:cicd` - Runs on port 80 (nginx)*
-
-*Ensure your manifest files match the image you want to deploy:*
-
-*• For `:v1.0.0` → `containerPort: 3000` and `targetPort: 3000`*
-*• For `:cicd` → `containerPort: 80` and `targetPort: 80`*
-
-*Note: ArgoCD will automatically detect pushed Git repository changes and redeploy application within 1-3 minutes. Everything returns to the exact state defined in Git.*

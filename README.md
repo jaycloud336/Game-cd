@@ -102,6 +102,47 @@ touch manifests/deployment.yaml
 touch manifests/service.yaml
 touch argocd/application.yaml
 ```
+### Application Template (https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/)
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/argoproj/argocd-example-apps.git
+    targetRevision: HEAD
+    path: guestbook
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: guestbook
+```
+## Example version to use with this project:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: react-game
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jaycloud336/Game-cd.git
+    targetRevision: HEAD
+    path: manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: react-game-cd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
 
 ### 5. Deploy Application
 ```bash
