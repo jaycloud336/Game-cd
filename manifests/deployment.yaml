@@ -15,18 +15,18 @@ spec:
     spec:
       containers:
       - name: react-game-container
-        image: jaycloud336/malgus-game-app:v1.0.0
+        image: jaycloud336/malgus-game-app:cicd
         ports:
-        - containerPort: 3000 
+        - containerPort: 80 
         livenessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 80
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /
-            port: 3000 
+            port: 80 
           initialDelaySeconds: 5
           periodSeconds: 5
